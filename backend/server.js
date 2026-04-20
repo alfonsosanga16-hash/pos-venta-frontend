@@ -11,22 +11,26 @@ app.use(express.json());
    CONEXIÓN MYSQL
 ================================ */
 
+
 const conexion = mysql.createConnection({
-  host: "localhost",
-  user: "pos_user",
-  password: "1234",
-  database: "punto_venta_db",
+  host: "roundhouse.proxy.rlwy.net",
+  port: 58665,
+  user: "root",
+  password: "pjjajEubjpYyNaKgzLVWWAVOjBkQITfS",
+  database: "railway",
 });
 
 function conectarMySQL() {
   return new Promise((resolve, reject) => {
     conexion.connect((err) => {
       if (err) return reject(err);
-      console.log("Conectado a MySQL ✅");
+      console.log("Conectado a MySQL en la nube 🚀");
       resolve();
     });
   });
 }
+
+module.exports = { conexion, conectarMySQL };
 
 /* ===============================
    CONEXIÓN MONGODB
