@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>POS Limpieza - Sistema Profesional</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --primary-dark: #0d6efd; }
+    #productoSelect { font-weight: bold; color: var(--primary-dark); }
+    
+    /* Frame con scroll independiente para historial */
+    .scroll-frame {
+      max-height: 450px;
+      overflow-y: auto;
+      border-bottom: 1px solid #dee2e6;
+    }
+    /* Estilo para los badges del historial */
+    .badge-item { 
+      font-size: 0.85rem; 
+      padding: 4px 12px;
+      background-color: #fff;
+      border: 1px solid #dee2e6;
+      color: #333;
+      border-radius: 8px;
+      display: inline-block;
+      margin: 2px;
+    }
+    .sticky-thead th { position: sticky; top: 0; background: white; z-index: 10; box-shadow: inset 0 -1px 0 #dee2e6; }
+    .table-sm td { vertical-align: middle; }
+  </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-dark shadow mb-4">
+  <div class="container-fluid">
+    <span class="navbar-brand mb-0 h1">POS Limpieza - Control de Ventas</span>
+    <div class="d-flex gap-2">
+      <a href="ventas.html" class="btn btn-primary btn-sm">Ventas</a>
+      <a href="productos.html" class="btn btn-outline-light btn-sm">Productos</a>
+      <a href="dashboard.html" class="btn btn-outline-light btn-sm">Dashboard</a>
+      <button class="btn btn-outline-warning btn-sm" onclick="cargarTodo()">Refrescar</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid px-4">
+  <div class="row g-4">
+
+    <div class="col-12 col-lg-5">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header fw-bold bg-white text-uppercase small text-muted">Agregar producto a la venta</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold">1. Buscar Producto</label>
+            <div class="input-group mb-2">
+              <span class="input-group-text">🔍</span>
+              <input type="text" id="busqueda" class="form-control form-control-lg" placeholder="Escribe para buscar..." oninput="filtrarProductos()" onkeydown="if(event.key === 'Enter') document.getElementById('cantidad').focus()">
+            </div>
+            <select id="productoSelect" class="form-select form-select-lg" onchange="cambiarModoVenta()"></select>
+          </div>
+
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Modo de venta</label>
+              <select id="modoVenta" class="form-select" onchange="actualizarVistaModo()"></select>
+            </div>
+            <div class="col-6 mb-3" id="bloqueCantidad">
+              <label class="form-label" id="labelCantidad">Cantidad</label>
+              <input type="number" id="cantidad" class="form-control" value="1" min="0.01" step="0.01">
+            </div>
+          </div>
+
+          <div id="bloqueMonto" class="mb-3" style="display:none;">
+            <label class="form-label">Monto en pesos ($)</label>
+            <input type="number" id="monto" class="form-control" value="10" min="0.01" step="0.01" oninput="previsualizarMonto()">
+            <small class="text-primary fw-bold" id="equivalenciaTexto"></small>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Método de pago</label>
+            <select id="metodoPago" class="form-select">
+              <option value="EFECTIVO">EFECTIVO</option>
+              <option value="TARJETA">TARJETA</option>
+              <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+            </select>
+          </div>
+
+          <div class="d-grid">
+            <button class="btn btn-primary btn-lg" onclick="agregarAlCarrito()">Agregar al carrito</button>
+          </div>
+          <div id="mensaje" class="mt-3"></div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header fw-bold bg-white d-flex justify-content-between align-items-center">
+          Stock Actual
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="switchUnidad" onchange="renderTablaStock()">
+            <label class="form-check-label small" for="switchUnidad">Ver en ml</label>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div style="max-height: 250px; overflow-y: auto;">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light sticky-thead">
+                <tr><th>Producto</th><th>Precio</th><th>Stock</th></tr>
+              </thead>
+              <tbody id="tablaStock"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-7">
+      <div class="card shadow-sm border-primary mb-4">
+        <div class="card-header fw-bold bg-primary text-white">Carrito de venta</div>
+        <div class="card-body">
+          <div class="table-responsive" style="min-height: 150px;">
+            <table class="table align-middle">
+              <thead><tr><th>Producto</th><th>Detalle</th><th>Subtotal</th><th></th></tr></thead>
+              <tbody id="tablaCarrito"></tbody>
+            </table>
+          </div>
+          
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <button class="btn btn-outline-danger btn-sm" onclick="vaciarCarrito()">Vaciar Carrito</button>
+            <div class="text-end">
+                <span class="text-muted">Total a cobrar:</span>
+                <h2 class="mb-0 text-success">$<span id="totalVenta">0.00</span></h2>
+            </div>
+          </div>
+          
+          <div class="d-grid mt-3">
+            <button class="btn btn-success btn-lg" onclick="guardarVenta()">Finalizar Venta (Vender)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header fw-bold bg-white d-flex justify-content-between align-items-center">
+          <span>Últimas ventas realizadas</span>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-dark" onclick="cargarVentas('hoy')">Hoy</button>
+            <button class="btn btn-outline-dark" onclick="cargarVentas('mes')">Mes</button>
+            <button class="btn btn-outline-dark" onclick="cargarVentas('todas')">Todas</button>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="scroll-frame">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light sticky-thead">
+                <tr>
+                  <th>Fecha/Hora</th>
+                  <th>Total</th>
+                  <th>Método</th>
+                  <th>Detalle Items (Litros/Und)</th>
+                </tr>
+              </thead>
+              <tbody id="tablaVentas"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "https://pos-venta-backend.onrender.com";
+  let productos = [];
+  let carrito = [];
+  let filtroActual = 'todas';
+
+  function mostrarMensaje(texto, tipo = "success") {
+    const div = document.getElementById("mensaje");
+    div.innerHTML = `<div class="alert alert-${tipo} py-2 mb-0 shadow-sm">${texto}</div>`;
+    setTimeout(() => { div.innerHTML = ""; }, 3000);
+  }
+
+  // --- BUSCADOR ---
+  function filtrarProductos() {
+    const texto = document.getElementById("busqueda").value.toLowerCase();
+    const select = document.getElementById("productoSelect");
+    select.innerHTML = "";
+
+    const filtrados = productos.filter(p => 
+      (p.nombre && p.nombre.toLowerCase().includes(texto)) || (p.sku && p.sku.toLowerCase().includes(texto))
+    );
+
+    if (filtrados.length === 0) {
+      select.innerHTML = `<option value="">No hay resultados</option>`;
+      return;
+    }
+
+    filtrados.forEach((p, index) => {
+      let precioL = `$${parseFloat(p.precio_litro || p.precio_venta).toFixed(2)}`;
+      let stockL = (parseFloat(p.stock_actual) / (p.unidad_medida === "MILILITRO" ? 1000 : 1)).toFixed(2);
+      let unidad = p.unidad_medida === "MILILITRO" ? "L" : p.unidad_medida;
+
+      const option = document.createElement("option");
+      option.value = p.id_producto;
+      option.textContent = `${p.nombre.toUpperCase()} | ${precioL}/L | Stock: ${stockL} ${unidad}`;
+      if (index === 0) option.selected = true;
+      select.appendChild(option);
+    });
+    cambiarModoVenta();
+  }
+
+  // --- TABLA DE STOCK ---
+  function renderTablaStock() {
+    const tabla = document.getElementById("tablaStock");
+    const verEnMl = document.getElementById("switchUnidad").checked;
+    tabla.innerHTML = "";
+
+    productos.forEach(p => {
+      const isLow = parseFloat(p.stock_actual) <= parseFloat(p.stock_minimo);
+      let stockDisplay = p.unidad_medida === "MILILITRO" 
+        ? (verEnMl ? `${parseFloat(p.stock_actual).toFixed(0)} ml` : `${(parseFloat(p.stock_actual)/1000).toFixed(2)} L`)
+        : `${parseFloat(p.stock_actual)} ${p.unidad_medida}`;
+
+      tabla.innerHTML += `
+        <tr class="${isLow ? 'table-warning' : ''}">
+          <td>${p.nombre}</td>
+          <td>$${parseFloat(p.precio_litro || p.precio_venta).toFixed(2)}</td>
+          <td class="fw-bold">${stockDisplay}</td>
+        </tr>`;
+    });
+  }
+
+  // --- HISTORIAL ---
+  async function cargarVentas(periodo = 'todas') {
+    filtroActual = periodo;
+    try {
+      const res = await fetch(`${API}/ventas`);
+      let ventas = await res.json();
+      const ahora = new Date();
+
+      if(periodo === 'hoy') {
+        ventas = ventas.filter(v => new Date(v.fecha).toDateString() === ahora.toDateString());
+      } else if(periodo === 'mes') {
+        ventas = ventas.filter(v => {
+          const f = new Date(v.fecha);
+          return f.getMonth() === ahora.getMonth() && f.getFullYear() === ahora.getFullYear();
+        });
+      }
+
+      const tabla = document.getElementById("tablaVentas");
+      tabla.innerHTML = "";
+      ventas.forEach(v => {
+        let detalle = v.items.map(i => {
+            const cant = parseFloat(i.cantidad_litros || i.cantidad);
+            return `<div class="badge-item">${i.nombre}: ${cant.toFixed(2)}L</div>`;
+        }).join("");
+
+        tabla.innerHTML += `
+          <tr>
+            <td><small>${new Date(v.fecha).toLocaleString()}</small></td>
+            <td class="fw-bold">$${parseFloat(v.total).toFixed(2)}</td>
+            <td>${v.metodo_pago}</td>
+            <td>${detalle}</td>
+          </tr>`;
+      });
+    } catch (e) { console.error(e); }
+  }
+
+  // --- VENTA ---
+  function cambiarModoVenta() {
+    const p = obtenerProductoSeleccionado();
+    if (!p) return;
+    document.getElementById("modoVenta").innerHTML = (p.tipo_venta === "GRANEL") 
+      ? `<option value="cantidad">Por cantidad (L)</option><option value="monto">Por monto ($)</option>` 
+      : `<option value="cantidad">Por unidad</option>`;
+    actualizarVistaModo();
+  }
+
+  function actualizarVistaModo() {
+    const modo = document.getElementById("modoVenta").value;
+    const p = obtenerProductoSeleccionado();
+    document.getElementById("bloqueCantidad").style.display = modo === "cantidad" ? "block" : "none";
+    document.getElementById("bloqueMonto").style.display = modo === "monto" ? "block" : "none";
+    if(modo === "cantidad" && p) document.getElementById("labelCantidad").textContent = (p.tipo_venta === "GRANEL") ? "Litros" : "Cantidad";
+    else previsualizarMonto();
+  }
+
+  function previsualizarMonto() {
+    const p = obtenerProductoSeleccionado();
+    const monto = parseFloat(document.getElementById("monto").value);
+    if (!p || !monto) return document.getElementById("equivalenciaTexto").textContent = "";
+    document.getElementById("equivalenciaTexto").textContent = `Equivale a: ${(monto / parseFloat(p.precio_litro || p.precio_venta)).toFixed(3)} L`;
+  }
+
+  function agregarAlCarrito() {
+    const p = obtenerProductoSeleccionado();
+    if (!p) return;
+    const modo = document.getElementById("modoVenta").value;
+    let item = { id_producto: p.id_producto, nombre: p.nombre };
+    
+    if (modo === "cantidad") {
+      item.cantidad = parseFloat(document.getElementById("cantidad").value);
+      item.subtotal = item.cantidad * parseFloat(p.precio_litro || p.precio_venta);
+      item.unidad = p.tipo_venta === "GRANEL" ? "L" : "und";
+    } else {
+      item.subtotal = parseFloat(document.getElementById("monto").value);
+      item.cantidad = item.subtotal / parseFloat(p.precio_litro);
+      item.unidad = "L";
+    }
+
+    if (item.cantidad <= 0 || isNaN(item.cantidad)) return mostrarMensaje("Error en cantidad", "danger");
+    
+    carrito.push(item);
+    renderCarrito();
+    document.getElementById("busqueda").value = "";
+    document.getElementById("busqueda").focus();
+    filtrarProductos();
+  }
+
+  function renderCarrito() {
+    const tabla = document.getElementById("tablaCarrito");
+    let total = 0;
+    tabla.innerHTML = "";
+    carrito.forEach((item, idx) => {
+      total += item.subtotal;
+      tabla.innerHTML += `<tr><td><strong>${item.nombre}</strong></td><td>${item.cantidad.toFixed(2)} ${item.unidad}</td><td>$${item.subtotal.toFixed(2)}</td><td><button class="btn btn-sm btn-danger" onclick="eliminarDelCarrito(${idx})">×</button></td></tr>`;
+    });
+    document.getElementById("totalVenta").textContent = total.toFixed(2);
+  }
+
+  async function guardarVenta() {
+    if (carrito.length === 0) return;
+    const venta = {
+      metodo_pago: document.getElementById("metodoPago").value,
+      items: carrito.map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad, monto: i.subtotal }))
+    };
+    try {
+      const res = await fetch(`${API}/ventas`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(venta) });
+      if ((await res.json()).ok) {
+        mostrarMensaje("Venta procesada ✅");
+        carrito = []; renderCarrito(); cargarTodo();
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  function obtenerProductoSeleccionado() { return productos.find(p => p.id_producto == document.getElementById("productoSelect").value); }
+  function eliminarDelCarrito(idx) { carrito.splice(idx, 1); renderCarrito(); }
+  function vaciarCarrito() { carrito = []; renderCarrito(); }
+  
+  async function cargarTodo() { 
+    try {
+      const res = await fetch(`${API}/productos`);
+      productos = await res.json();
+      renderTablaStock();
+      filtrarProductos();
+      await cargarVentas(filtroActual);
+    } catch(e) { console.error(e); }
+  }
+
+  cargarTodo();
+</script>
+</body>
+</html>
