@@ -26,7 +26,6 @@ body {
   font-weight: bold;
   text-align: center;
 }
-
 </style>
 </head>
 
@@ -48,26 +47,35 @@ async function login() {
   const username = document.getElementById("user").value;
   const password = document.getElementById("pass").value;
 
-  const res = await fetch("https://pos-venta-login-python.onrender.com", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ username, password })
-  });
+  try {
+    const res = await fetch("https://pos-venta-login-python.onrender.com/login", {  // 🔥 CORREGIDO
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ username, password })
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (data.ok) {
-    localStorage.setItem("usuario", JSON.stringify(data.usuario));
+    if (data.ok) {
+      localStorage.setItem("usuario", JSON.stringify(data.usuario));
 
-    if (data.usuario.rol === "ADMIN") {
-      window.location.href = "productos.html";
+      if (data.usuario.rol === "ADMIN") {
+        window.location.href = "productos.html";
+      } else {
+        window.location.href = "cajero.html";
+      }
+
     } else {
-      window.location.href = "cajero.html";
+      document.getElementById("mensaje").innerHTML =
+        `<div class="alert alert-danger py-2">${data.error || "Usuario o contraseña incorrectos"}</div>`;
     }
 
-  } else {
+  } catch (error) {
+    console.error(error);
     document.getElementById("mensaje").innerHTML =
-      `<div class="alert alert-danger py-2">Usuario o contraseña incorrectos</div>`;
+      `<div class="alert alert-danger py-2">Error de conexión con el servidor</div>`;
   }
 }
 </script>
