@@ -332,8 +332,11 @@ const API = "https://pos-venta-backend.onrender.com";
     document.getElementById("totalVenta").textContent = total.toFixed(2);
   }
 
-  async function guardarVenta() {
+ async function guardarVenta() {
   if (carrito.length === 0) return;
+
+  // 🧾 ABRIR VENTANA PRIMERO (CLAVE)
+  const ticketWindow = window.open("", "_blank");
 
   const venta = {
     metodo_pago: document.getElementById("metodoPago").value,
@@ -355,7 +358,6 @@ const API = "https://pos-venta-backend.onrender.com";
 
     if (data.ok) {
 
-      // 🧾 CREAR TICKET (ESTO ES LO NUEVO)
       const ticket = {
         fecha: new Date(),
         metodo_pago: document.getElementById("metodoPago").value,
@@ -368,11 +370,10 @@ const API = "https://pos-venta-backend.onrender.com";
         }))
       };
 
-      // 💾 GUARDAR PARA ticket.html
       localStorage.setItem("ticketVenta", JSON.stringify(ticket));
 
-      // 🧾 ABRIR TU HTML DE TICKET
-      window.open("ticket.html", "_blank");
+      // 🧾 REDIRIGIR ESA VENTANA YA ABIERTA
+      ticketWindow.location.href = "ticket.html";
 
       mostrarMensaje("Venta procesada ✅");
 
@@ -383,9 +384,9 @@ const API = "https://pos-venta-backend.onrender.com";
 
   } catch (e) {
     console.error(e);
+    ticketWindow.close(); // cerrar si falla
   }
 }
-
 
   function obtenerProductoSeleccionado() { return productos.find(p => p.id_producto == document.getElementById("productoSelect").value); }
   function eliminarDelCarrito(idx) { carrito.splice(idx, 1); renderCarrito(); }
