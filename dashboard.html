@@ -140,6 +140,19 @@ body { background:#f5f7fb; }
 </div>
 
 <script>
+
+const user = JSON.parse(localStorage.getItem("usuario"));
+
+// 🔒 PROTECCIÓN TOTAL
+if (!user) {
+  window.location.href = "login.html";
+} else if (user.rol !== "ADMIN") {
+  window.location.href = "ventas.html";
+}
+
+
+
+
 const API = "https://pos-venta-backend.onrender.com";
 
 let chartVentas;

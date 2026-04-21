@@ -197,7 +197,23 @@
   </div>
 </div>
 
+
+
+
+
 <script>
+
+const user = JSON.parse(localStorage.getItem("usuario"));
+
+if (!user) {
+  window.location.href = "login.html";
+}
+
+if (user.rol !== "ADMIN") {
+  alert("No tienes acceso a productos");
+  window.location.href = "ventas.html";
+}
+
 const API = "https://pos-venta-backend.onrender.com";
   let productos = [];
   let categorias = [];
