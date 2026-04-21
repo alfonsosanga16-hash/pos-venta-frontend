@@ -36,7 +36,9 @@
   <div class="container-fluid">
     <span class="navbar-brand mb-0 h1">POS Limpieza - Control de Ventas</span>
     <div class="d-flex gap-2">
- 
+      <a href="ventas.html" class="btn btn-primary btn-sm">Ventas</a>
+      <a href="productos.html" class="btn btn-outline-light btn-sm">Productos</a>
+      <a href="dashboard.html" class="btn btn-outline-light btn-sm">Dashboard</a>
       <button class="btn btn-outline-warning btn-sm" onclick="cargarTodo()">Refrescar</button>
     </div>
   </div>
@@ -330,20 +332,61 @@ const API = "https://pos-venta-backend.onrender.com";
     document.getElementById("totalVenta").textContent = total.toFixed(2);
   }
 
-  async function guardarVenta() {
-    if (carrito.length === 0) return;
-    const venta = {
-      metodo_pago: document.getElementById("metodoPago").value,
-      items: carrito.map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad, monto: i.subtotal }))
-    };
-    try {
-      const res = await fetch(`${API}/ventas`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(venta) });
-      if ((await res.json()).ok) {
-        mostrarMensaje("Venta procesada ✅");
-        carrito = []; renderCarrito(); cargarTodo();
-      }
-    } catch (e) { console.error(e); }
+ async function guardarVenta() {
+  if (carrito.length === 0) return;
+
+  // 🧾 ABRIR VENTANA PRIMERO (CLAVE)
+  const ticketWindow = window.open("", "_blank");
+
+  const venta = {
+    metodo_pago: document.getElementById("metodoPago").value,
+    items: carrito.map(i => ({
+      id_producto: i.id_producto,
+      cantidad: i.cantidad,
+      monto: i.subtotal
+    }))
+  };
+
+  try {
+    const res = await fetch(`${API}/ventas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(venta)
+    });
+
+    const data = await res.json();
+
+    if (data.ok) {
+
+      const ticket = {
+        fecha: new Date(),
+        metodo_pago: document.getElementById("metodoPago").value,
+        total: carrito.reduce((sum, i) => sum + i.subtotal, 0),
+        items: carrito.map(i => ({
+          nombre: i.nombre,
+          cantidad: i.cantidad,
+          unidad_medida: i.unidad || "",
+          subtotal: i.subtotal
+        }))
+      };
+
+      localStorage.setItem("ticketVenta", JSON.stringify(ticket));
+
+      // 🧾 REDIRIGIR ESA VENTANA YA ABIERTA
+      ticketWindow.location.href = "ticket.html";
+
+      mostrarMensaje("Venta procesada ✅");
+
+      carrito = [];
+      renderCarrito();
+      cargarTodo();
+    }
+
+  } catch (e) {
+    console.error(e);
+    ticketWindow.close(); // cerrar si falla
   }
+}
 
   function obtenerProductoSeleccionado() { return productos.find(p => p.id_producto == document.getElementById("productoSelect").value); }
   function eliminarDelCarrito(idx) { carrito.splice(idx, 1); renderCarrito(); }
@@ -363,3 +406,4 @@ const API = "https://pos-venta-backend.onrender.com";
 </script>
 </body>
 </html>
+
