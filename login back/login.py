@@ -8,10 +8,11 @@ CORS(app)
 # 🔌 FUNCIÓN DE CONEXIÓN (MEJOR QUE GLOBAL)
 def get_db():
     return mysql.connector.connect(
-        host="localhost",
-        user="pos_user",
-        password="1234",
-        database="punto_venta_db"
+        host="roundhouse.proxy.rlwy.net",  
+        user="root",                        
+        password="pjjajEubjpYyNaKgzLVWWAVOjBkQITfS",
+        database="railway",
+        port=58665                        
     )
 
 @app.route("/login", methods=["POST"])
